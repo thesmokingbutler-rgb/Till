@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en-GB"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Butler Till</title>
+<style>
+:root{--bg:#ecebe7;--card:#fff;--ink:#1d1f20;--mut:#6b6f72;--acc:#2f5d62;--onacc:#fff;--line:#d6d4ce;--warn:#a5411f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#151718;--card:#202324;--ink:#ecebe7;--mut:#9aa0a3;--acc:#7fb4b8;--onacc:#10191a;--line:#33393b;--warn:#e08a66;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#151718;--card:#202324;--ink:#ecebe7;--mut:#9aa0a3;--acc:#7fb4b8;--onacc:#10191a;--line:#33393b;--warn:#e08a66;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 "Trebuchet MS",system-ui,sans-serif;padding-bottom:150px}
+h1{font:700 20px Georgia,serif;margin:0}header{display:flex;justify-content:space-between;align-items:center;padding:14px 14px 6px}
+nav{display:flex;gap:6px;padding:0 14px 8px;overflow-x:auto}
+nav button,.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:8px 14px;font:inherit}
+nav button.on{background:var(--acc);color:var(--onacc);border-color:var(--acc)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px}
+.p{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:left;color:var(--ink);font:inherit;min-height:74px}
+.p b{display:block;font-size:15px}.p span{color:var(--mut);font-size:13px}.p.z{opacity:.45}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));max-height:55vh;overflow:auto}
+.ln{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:4px 0;font-size:15px}
+.ln button{border:0;background:none;color:var(--warn);font-size:18px;padding:4px 10px}
+.row{display:flex;gap:8px;margin-top:8px}.row>*{flex:1}
+.go{background:var(--acc);color:var(--onacc);border:0;border-radius:10px;padding:14px;font:700 17px inherit}
+.alt{background:none;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:14px;font:inherit}
+.sh{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;z-index:5}
+.sh.on{display:flex}.sh>div{background:var(--card);width:100%;padding:18px 14px calc(18px + env(safe-area-inset-bottom,0px));border-radius:16px 16px 0 0}
+input,select{width:100%;font:inherit;font-size:22px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.pg{padding:0 14px}.pg h2{font-size:16px;margin:14px 0 6px}.mut{color:var(--mut);font-size:13px}
+.ord{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:6px;font-size:14px}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 3px}.set input,.set select{font-size:16px}
+</style></head><body>
+<header><h1>Butler Till</h1><span class="mut" id="ord"></span></header>
+<div id="toast" style="display:none;position:fixed;left:14px;right:14px;top:calc(12px + env(safe-area-inset-top,0px));background:var(--ink);color:var(--bg);padding:12px;border-radius:10px;z-index:9;font-size:15px"></div>
+<nav id="tabs"></nav>
+<div id="shop"><div class="grid" id="grid"></div></div>
+<div id="logv" class="pg" hidden></div>
+<div id="setv" class="pg set" hidden></div>
+<div class="bar" id="bar"></div>
+<div class="sh" id="sh"><div>
+<b id="shn"></b><div class="mut" id="shr"></div>
+<label>Price per 100g (£)</label><input id="shr2" type="number" step="0.1" inputmode="decimal"><label>Weight (g)</label><input id="shw" type="number" inputmode="numeric" min="1">
+<div style="font:700 28px Georgia,serif;margin:10px 0" id="shp"></div>
+<div class="row"><button class="alt" id="shx">Cancel</button><button class="go" id="sha">Add</button></div>
+</div></div>
+<div class="sh" id="suw"><div>
+<b>Take payment</b><div style="font:700 28px Georgia,serif;margin:10px 0" id="sut"></div><p class="mut">Links not opening? Open the SumUp app yourself and key in this amount. The sale is already logged here.</p>
+<a class="go" id="su1" target="_top" rel="noopener" style="display:block;text-align:center;text-decoration:none">Open SumUp</a>
+<p class="mut">Nothing happens or it says it can’t open? Try this one, and make sure the till is open in Chrome, not inside the Claude app.</p>
+<a class="alt" id="su2" target="_top" rel="noopener" style="display:block;text-align:center;text-decoration:none;color:var(--ink)">Open SumUp (alternative link)</a>
+<div class="row"><button class="alt" id="suc">Done / close</button></div>
+</div></div>
+<script>
+// Snapshot of Products tab (22 Nov 2026). type c = weighed cheese, f = fixed price.
+var P=[
+["AP-HAL","Smoked Halloumi","Apple","c",9,0],["AP-EMM","Smoked Emmental","Apple","c",17,0],["AP-MOZ","Smoked Mozzarella","Apple","c",11,0],
+["BE-PCH","Cheddar with Paprika","Beech","c",10,0],["BE-DBL","Smoked Danish Blue","Beech","c",20,0],["CH-WEN","Smoked Wensleydale","Cherry","c",14,0],
+["CH-WCR","Smoked Wensleydale & Cranberry","Cherry","c",20,0],["CH-MCD","Smoked Mild Cheddar","Cherry","c",8,0],["CH-GOU","Smoked Gouda","Cherry","c",16,0],
+["AL-MJK","Smoked Monterey Jack","Alder","c",19,0],["AL-WGI","Smoked Wensleydale Ginger","Alder","c",11,0],["WH-RLC","Smoked Red Leicester","Whisky","c",17,0],
+["OK-BUT","Smoked Unsalted Butter","Oak","f",8,2],["CH-PCA","Smoked Paprika Cashews","Cherry","f",8,2],["CH-DCA","Smoked Dry Salted Cashews","Cherry","f",9,2],
+["AP-PSL","Smoked Pink Himalayan Salt","Apple","f",16,1]];
+var cats={Cheese:"c",Other:"f"};
+var S;try{S=JSON.parse(localStorage.getItem("bt")||"null")}catch(e){}
+S=S||{sold:{},log:[],ord:2000,rate:3,key:"",app:"",chan:"Direct"};
+if(S.prods)P=S.prods;S.rates=S.rates||{};var basket=[],tab="Cheese",cur=null;
+function save(){try{localStorage.setItem("bt",JSON.stringify(S))}catch(e){}}
+function $(i){return document.getElementById(i)}
+function gbp(n){return "£"+n.toFixed(2)}
+function left(p){return p[4]-(S.sold[p[0]]||0)-basket.filter(function(b){return b.id==p[0]}).reduce(function(a,b){return a+b.q},0)}
+function rate(p){return S.rates[p[0]]!=null?S.rates[p[0]]:(p[5]||S.rate)}
+function dt(){var d=new Date(),m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return ("0"+d.getDate()).slice(-2)+"-"+m[d.getMonth()]+"-"+String(d.getFullYear()).slice(2)}
+function render(){pend="";
+ $("ord").textContent="Order "+S.ord;
+ $("tabs").innerHTML=["Cheese","Other","Log","Settings"].map(function(t){return '<button class="'+(t==tab?"on":"")+'" data-t="'+t+'">'+t+'</button>'}).join("");
+ var shop=tab=="Cheese"||tab=="Other";
+ $("shop").hidden=!shop;$("logv").hidden=tab!="Log";$("setv").hidden=tab!="Settings";$("bar").style.display=shop?"":"none";
+ if(shop){$("grid").innerHTML=P.map(function(p,i){return [p,i]}).filter(function(x){return x[0][3]==cats[tab]}).map(function(x){var p=x[0],l=left(p);
+  return '<button class="p'+(l<1?" z":"")+'" data-i="'+x[1]+'"><b>'+p[1]+'</b><span>'+p[2]+' · '+(p[3]=="f"?gbp(p[5]):gbp(rate(p))+'/100g')+' · '+l+' left</span></button>'}).join("");
+  var tot=basket.reduce(function(a,b){return a+b.p*b.q},0);
+  $("bar").innerHTML=(basket.length?basket.map(function(b,i){return '<div class="ln"><span>'+(b.q>1?b.q+" × ":"")+b.n+(b.g?" "+b.g+"g":"")+'</span><span>'+gbp(b.p*b.q)+' <button data-r="'+i+'" aria-label="Remove">✕</button></span></div>'}).join(""):'<div class="mut">Tap a product to add it.</div>')+(basket.length?'<button class="chip" id="clrb">Clear basket</button>':'')+
+  '<div class="row"><button class="go" id="card"'+(tot?"":" disabled")+'>Charge '+gbp(tot)+'</button><button class="alt" id="cash"'+(tot?"":" disabled")+'>Cash</button></div>';}
+ if(tab=="Log")logView();if(tab=="Settings")setView();
+}
+function logView(){var o={};S.log.forEach(function(r){(o[r.ord]=o[r.ord]||[]).push(r)});
+ var h='<h2>Sales not yet copied ('+S.log.length+' lines)</h2><div class="row"><button class="go" id="cp">Copy for tracker</button></div><p class="mut">Pastes into the Sales tab. Clear once pasted.</p>';
+ Object.keys(o).reverse().forEach(function(k){var r=o[k];h+='<div class="ord"><b>#'+k+'</b> · '+r[0].pay+' · '+gbp(r.reduce(function(a,x){return a+x.tot},0))+'<br>'+r.map(function(x){return x.q+' × '+x.n+(x.note?' '+x.note:'')}).join('<br>')+'<div class="row"><button class="alt" data-v="'+k+'">Cancel order and restore stock</button></div></div>'});
+ if(S.log.length)h+='<div class="row"><button class="alt" id="clr">Clear after pasting</button></div>';
+ $("logv").innerHTML=h}
+function setView(){$("setv").innerHTML='<h2>Settings</h2><label>Default cheese price per 100g (£), used when a cheese has no price</label><input id="s1" type="number" step="0.1" value="'+S.rate+'">'+
+ '<label>Next order number</label><input id="s2" type="number" value="'+S.ord+'">'+
+ '<label>Channel</label><select id="s3"><option>Direct</option><option>Fair</option><option>Online</option></select>'+
+ '<label>SumUp affiliate key</label><input id="s4" value="'+S.key+'"><label>SumUp application ID (the identifier you entered when creating the key)</label><input id="s5" value="'+S.app+'">'+
+ '<div class="row"><button class="go" id="ss">Save</button><button class="alt" id="tst">Test £1 charge</button></div><h2>Update products and stock</h2><p class="mut">Paste your sales into the tracker first. Then in Sheets open the Products tab, select all, copy, and paste here. Only Active products with stock are imported.</p><textarea id="imp" rows="4" placeholder="Paste Products tab here" style="width:100%;font:inherit;font-size:14px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)"></textarea><div class="row"><button class="go" id="ib">Import products</button></div><p class="mut">'+(S.prods?'Using imported products.':'Using the 22 Nov snapshot.')+' <a href="#" id="rs" style="color:var(--warn)">Reset stock used</a></p>';
+ $("s3").value=S.chan}
+function imp(){var tx=$("imp").value.trim().split(/\r?\n/).map(function(l){return l.split("\t").map(function(c){return c.replace(/^"|"$/g,"").trim()})});
+ var h=tx[0],ix=function(n){return h.indexOf(n)};var a=ix("Product ID"),b=ix("Product"),c=ix("Category"),w=ix("Wood"),s=ix("Status"),r=ix("Retail price (£)"),k=ix("In stock"),ps=ix("Pack size (g)");
+ if(a<0||b<0||c<0||s<0||k<0){msg("Couldn’t find the Products headings. Copy the whole tab, including the header row.");return}
+ var out=[],seen={},dup=[];
+ tx.slice(1).forEach(function(x){var st=+x[k]||0;if(x[s]!="Active"||st<1||!x[a]||x[c]=="Box")return;if(seen[x[a]]){dup.push(x[a]);return}seen[x[a]]=1;
+  var pr=parseFloat(String(x[r]).replace(/[^0-9.]/g,""))||0,pz=ps>=0?(parseFloat(x[ps])||100):100,ch=x[c]=="Cheese";out.push([x[a],x[b],x[w],ch?"c":"f",st,ch?Math.round(pr/pz*10000)/100:pr])});
+ if(!out.length){msg("No Active products with stock found.");return}
+ P=out;S.prods=out;S.sold={};S.rates={};save();msg("Imported "+out.length+" products."+(dup.length?" Duplicate ID skipped (first row used): "+dup.join(", ")+".":""));tab="Cheese";render()}
+var pend="";
+function msg(t){var m=$("toast");m.textContent=t;m.style.display="block";clearTimeout(msg.t);msg.t=setTimeout(function(){m.style.display="none"},5000)}
+function ask(k,t,txt){if(pend==k){pend="";return true}pend=k;t.textContent=txt;return false}
+function sumup(t,ti,id){var q="affiliate-key="+encodeURIComponent(S.key)+(S.app?"&app-id="+encodeURIComponent(S.app):"")+"&total="+t.toFixed(2)+"&currency=GBP&title="+encodeURIComponent(ti.slice(0,100))+"&foreign-tx-id="+encodeURIComponent(id+"-"+Date.now());
+ $("sut").textContent=gbp(t);$("su1").href="sumupmerchant://pay/1.0?"+q;$("su2").href="intent://pay/1.0?"+q+"#Intent;scheme=sumupmerchant;end";$("suw").classList.add("on")}
+function finish(pay){
+ var d=dt(),o=S.ord;basket.forEach(function(b){S.sold[b.id]=(S.sold[b.id]||0)+b.q;
+  S.log.push({date:d,ord:o,id:b.id,n:b.n,q:b.q,unit:b.p,tot:b.p*b.q,note:b.g?b.g+"g":"",pay:pay,chan:S.chan})});
+ var tot=basket.reduce(function(a,b){return a+b.p*b.q},0),title=basket.map(function(b){return b.n+(b.g?" "+b.g+"g":"")}).join(", ");
+ basket=[];S.ord++;save();render();
+ if(pay=="Paid"&&S.key){sumup(tot,"Order "+o+": "+title,"till-"+o)}
+ else if(pay=="Paid")msg("Sale logged. Add your SumUp affiliate key in Settings to open SumUp automatically.")}
+document.addEventListener("click",function(e){var t=e.target.closest("button,a");if(!t)return;
+ if(t.dataset.t){tab=t.dataset.t;render()}
+ else if(t.dataset.i){var p=P[t.dataset.i];if(left(p)<1)return;
+  if(p[3]=="f"){var f=basket.filter(function(b){return b.id==p[0]})[0];if(f)f.q++;else basket.push({id:p[0],n:p[1]+" ("+p[2]+")",p:p[5],q:1});render()}
+  else{cur=p;$("shn").textContent=p[1]+" ("+p[2]+")";$("shr").textContent="";$("shr2").value=rate(p);$("shw").value=100;$("shp").textContent=gbp(rate(p));$("sh").classList.add("on")}}
+ else if(t.dataset.v){var vo=t.dataset.v;if(ask("v"+vo,t,"Tap again to cancel order #"+vo+". If the card was charged, refund it in SumUp.")){S.log=S.log.filter(function(r){if(r.ord==vo){S.sold[r.id]=Math.max(0,(S.sold[r.id]||0)-r.q);return false}return true});save();render()}}
+ else if(t.id=="clrb"){basket=[];render()}
+ else if(t.dataset.r){basket.splice(t.dataset.r,1);render()}
+ else if(t.id=="shx")$("sh").classList.remove("on");
+ else if(t.id=="sha"){var g=+$("shw").value,rr=+$("shr2").value;if(g>0&&rr>0){if(rr!=rate(cur)){S.rates[cur[0]]=rr;save()}basket.push({id:cur[0],n:cur[1]+" ("+cur[2]+")",p:cp(),q:1,g:g});$("sh").classList.remove("on");render()}}
+ else if(t.id=="card")finish("Paid");else if(t.id=="cash")finish("Paid (cash)");
+ else if(t.id=="cp"){var tsv=S.log.map(function(r){return [r.date,r.ord,"",r.id,r.n,r.q,r.unit.toFixed(2),"",r.tot.toFixed(2),r.chan,r.pay=="Paid"?"Paid":"Paid","Collected","",r.note].join("\t")}).join("\n");
+  (navigator.clipboard?navigator.clipboard.writeText(tsv):Promise.reject()).then(function(){msg("Copied "+S.log.length+" lines")},function(){var ta=document.createElement("textarea");ta.value=tsv;ta.style.cssText="width:100%;height:120px;margin-top:8px";$("logv").appendChild(ta);ta.select();msg("Select and copy the text box below")})}
+ else if(t.id=="clr"){if(ask("clr",t,"Tap again to clear. Only once pasted into the tracker.")){S.log=[];save();render()}}
+ else if(t.id=="ss"){S.rate=+$("s1").value||3;S.ord=+$("s2").value||S.ord;S.chan=$("s3").value;S.key=$("s4").value.trim();S.app=$("s5").value.trim();save();tab="Cheese";render()}
+ else if(t.id=="suc")$("suw").classList.remove("on");
+ else if(t.id=="tst"){if(!S.key){msg("Save your affiliate key first, then tap Test.");return}sumup(1,"Till test","test")}
+ else if(t.id=="ib")imp();
+ else if(t.id=="rs"){e.preventDefault();if(ask("rs",t,"Tap again to reset stock used")){S.sold={};save();render()}}});
+function cp(){return Math.round((+$("shw").value||0)*(+$("shr2").value||0))/100}
+["shw","shr2"].forEach(function(i){$(i).addEventListener("input",function(){$("shp").textContent=gbp(cp())})});
+render();
+</script></body></html>
